@@ -1,13 +1,30 @@
-"""
-Embedding generation via sentence-transformers.
+from sentence_transformers import SentenceTransformer
+import os
 
-Runs locally in-process (model loaded from EMBEDDING_MODEL_NAME in config) —
-no external API call, no API key, no separate service to host or manage.
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-TODO (RAG ingestion commit):
-- Load the SentenceTransformer model once (module-level, not per-call) using
-  settings.embedding_model_name
-- embed_texts(texts: list[str]) -> list[list[float]], used by both:
-    - ingestion (rag/vector_store.py, embedding chunks before upsert)
-    - query time (rag/retriever.py, embedding the incoming question)
-"""
+class EmbeddingModel:
+
+    _model = None
+
+    def __init__(self):
+
+        if EmbeddingModel._model is None:
+            EmbeddingModel._model = SentenceTransformer(
+                "BAAI/bge-small-en-v1.5"
+            )
+
+        self.model = EmbeddingModel._model
+
+    def embed_text(self, text: str):
+        return self.model.encode(
+            text,
+            normalize_embeddings=True
+        ).tolist()
+
+    def embed_batch(self, texts: list[str]):
+        return self.model.encode(
+            texts,
+            normalize_embeddings=True
+        ).tolist()
