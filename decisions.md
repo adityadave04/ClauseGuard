@@ -1,60 +1,261 @@
-# Technical Decisions
+# Architectural Decisions
 
-This document explains the key technical choices made while building
-ClauseGuard, and why. Filled in progressively as each piece is built —
-sections marked TBD get written in the commit that implements them, while
-the reasoning is still fresh.
+This document records key design decisions made during the development of ClauseGuard.
 
-## 1. Chunking strategy
-_(TBD — RAG ingestion commit)_
+---
 
-## 2. Agent framework choice
-_(TBD — agent graph commit)_
+# 1. Retrieval-Augmented Generation (RAG)
 
-## 3. Reranking approach
-_(TBD — RAG retrieval commit)_
+## Decision
 
-## 4. Vector DB choice
+Use a RAG architecture instead of passing the entire contract directly to the LLM.
 
-Qdrant Cloud (hosted, free tier) was chosen over a local Chroma instance to
-keep the whole project cloud-native — no local database process to start,
-manage, or lose state on between sessions, and it forces the "configure
-everything via .env" requirement to actually be exercised end-to-end
-(URL + API key, not a file path).
+## Reason
 
-## 5. LLM provider choice
+* Reduces context size.
+* Improves response quality.
+* Enables citation of relevant sections.
+* Scales to larger contracts.
 
-Groq was chosen for the LLM layer: free tier, very fast inference (matters
-for an agent making several calls per query), and an OpenAI-compatible API
-that LangGraph/LangChain support natively. The provider is selected
-entirely through `LLM_PROVIDER` / `LLM_API_KEY` / `LLM_MODEL` in `.env` —
-swapping to Gemini or another provider is a config change, not a code
-change.
+---
 
-## 6. Known limitations / ambiguities in the source contract
+# 2. Vector Database
 
-Documenting these now, before building the extraction tool, so the
-implementation can be deliberate about them rather than accidentally
-getting them wrong:
+## Decision
 
-- **Contract value conflict.** The cover page and Clause 3.1 both define
-  "Contract Value" as INR 2,40,00,000, and 3.1 explicitly caps total
-  contract value at that figure "unless agreed by Change Order." Schedule
-  D's fee breakdown table, however, sums to INR 2,54,00,000, with a
-  footnote attributing the gap to a contingency reserve "subject to
-  reconciliation audit" — i.e., not yet an approved Change Order. The
-  extraction tool is built to prefer the defined-term value (24,000,000)
-  over the schedule subtotal, since that's the legally operative figure.
-  A naive "grab the number near the word total" approach would get this
-  wrong.
+Use Qdrant.
 
-- **Ambiguous notice period.** The contract contains at least five
-  different notice periods depending on context: the cover page's generic
-  30-day written notice, 90 days for non-renewal (8.2) and for termination
-  for convenience (8.4), 15 days for late-payment suspension (3.4.2), and
-  5 business days for emergency Change Orders (2.3.3). The required schema
-  has one `notice_period_days` field. We populate it from the cover page's
-  explicitly labeled "Notice Period" term (30 days), since it's the one
-  defined as a standalone contract term rather than embedded in a specific
-  clause's logic — but this is a genuine schema/contract mismatch worth
-  flagging rather than silently resolving.
+## Reason
+
+* Simple API.
+* Managed cloud offering available.
+* Efficient similarity search.
+* Good Python support.
+
+---
+
+# 3. Embedding Model
+
+## Decision
+
+Use sentence-transformers.
+
+Model:
+
+all-MiniLM-L6-v2
+
+## Reason
+
+* Lightweight.
+* Fast inference.
+* Good semantic search quality.
+* Suitable for local execution.
+
+---
+
+# 4. Cross Encoder Reranker
+
+## Decision
+
+Use:
+
+cross-encoder/ms-marco-MiniLM-L-6-v2
+
+## Reason
+
+* Improves retrieval accuracy.
+* Better relevance ranking.
+* Reduces hallucinations.
+
+---
+
+# 5. OCR Strategy
+
+## Decision
+
+Use PyMuPDF first and OCR only when necessary.
+
+OCR stack:
+
+* pdf2image
+* pytesseract
+
+## Reason
+
+* Faster when PDFs already contain text.
+* OCR fallback supports scanned documents.
+
+---
+
+# 6. Agent Framework
+
+## Decision
+
+Use LangGraph.
+
+## Reason
+
+* Clear graph-based workflow.
+* Easy routing between tools.
+* Supports future expansion.
+
+---
+
+# 7. Tool-Based Architecture
+
+## Decision
+
+Create separate tools:
+
+* Ask Tool
+* Risk Scanner
+* Metadata Extractor
+
+## Reason
+
+* Separation of concerns.
+* Easier testing.
+* Easier future extension.
+
+---
+
+# 8. API Framework
+
+## Decision
+
+Use FastAPI.
+
+## Reason
+
+* Fast development.
+* Automatic documentation.
+* Simple REST endpoints.
+
+Endpoints:
+
+* /ask
+* /risk
+* /extract
+
+---
+
+# 9. UI Framework
+
+## Decision
+
+Use Streamlit.
+
+## Reason
+
+* Rapid prototyping.
+* Minimal frontend code.
+* Easy integration with APIs.
+
+---
+
+# 10. LLM Layer
+
+## Decision
+
+Use LiteLLM.
+
+## Reason
+
+* Provider abstraction.
+* Easy model switching.
+* Supports multiple vendors.
+
+Current model:
+
+grok-3-mini
+
+Future models:
+
+* GPT-4o
+* Claude
+* Gemini
+
+---
+
+# 11. Session State
+
+## Decision
+
+Use Streamlit session state.
+
+## Reason
+
+* Preserve responses.
+* Support clear functionality.
+* Improve user experience.
+
+---
+
+# 12. Risk Analysis
+
+## Decision
+
+Use LLM-generated structured JSON.
+
+## Reason
+
+* Easy UI rendering.
+* Structured outputs.
+* Supports future reporting.
+
+Fields:
+
+* severity
+* section_number
+* title
+* issue
+* recommendation
+
+---
+
+# 13. Metadata Extraction
+
+## Decision
+
+Extract key information into JSON.
+
+## Reason
+
+Provides structured contract information:
+
+* agreement_number
+* service_provider
+* client
+* governing_law
+* payment_terms_days
+* notice_period_days
+* termination_fee_percent
+* uptime_sla_percent
+
+---
+
+# 14. Docker
+
+## Decision
+
+Provide Docker support but defer container deployment.
+
+## Reason
+
+* Current local environment sufficient.
+* Disk space limitations.
+* Docker can be added later without changing application logic.
+
+---
+
+# Future Improvements
+
+* Multi-document support.
+* Authentication.
+* Report generation.
+* Chat history.
+* PDF export.
+* Deployment.
+* Batch processing.
+* Multi-agent workflows.
+* Evaluation framework.

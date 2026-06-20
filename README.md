@@ -1,85 +1,261 @@
-# ClauseGuard — Contract Intelligence Agent
+# ClauseGuard
 
-> Status: scaffolding complete (Commit 1). Core agent/RAG logic lands in
-> subsequent commits — this README fills in as each piece is built.
+ClauseGuard is an AI-powered Contract Intelligence Assistant built using FastAPI, Streamlit, LangGraph, Qdrant, and LLMs.
 
-A single AI agent (LangGraph) with three tools that make one contract
-document instantly queryable, risk-scannable, and data-extractable:
+It provides three core capabilities:
 
-1. **Ask Anything** — natural language Q&A over the contract, every answer
-   includes a citation (section number + short quote)
-2. **Risk Scan** — agent autonomously flags clauses matching a risk-keyword
-   taxonomy, returns structured JSON
-3. **Key Data Extract** — pulls a fixed JSON schema of contract terms
-   (parties, value, term, governing law, liability cap, etc.)
+* Ask Anything about a contract
+* Risk Analysis
+* Key Data Extraction
 
-All three tools run through one shared LangGraph agent instance.
+---
 
-## Tech stack
+# Features
 
-| Layer | Choice | Why |
-|---|---|---|
-| Backend | FastAPI | typed request/response models, fast to demo |
-| UI | Streamlit | fastest path to a working 3-tool interface |
-| Agent framework | LangGraph | explicit graph, easy to walk through node-by-node live |
-| LLM | Groq (swap via `.env`) | free tier, fast inference, OpenAI-compatible |
-| Embeddings | sentence-transformers, local | no API key, no extra hosted service |
-| Vector DB | Qdrant Cloud (free tier) | hosted, no local infra to manage |
-| Reranker | cross-encoder, local | real reranking step, fully explainable |
+## Ask Anything
 
-## Project structure
+Query contracts in natural language.
 
-```
-clauseguard/
-├── agent/        # LangGraph graph definition + tool implementations
-├── rag/          # Chunking, embeddings, vector store, retrieval, reranking
-├── prompts/      # Versioned system prompts
-├── api/          # FastAPI route handlers
-├── ui/           # Streamlit frontend
-├── tests/        # test_rag.py, test_tools.py
-├── data/         # Source contract PDF
-├── config.py     # Central settings loader (reads .env — see config.py)
-├── .env.example  # Every required env var, documented
-├── decisions.md  # Why each technical choice was made
-└── README.md
-```
+Examples:
 
-## Setup (~5 minutes)
+* Can either party terminate for convenience?
+* What are the payment terms?
+* What obligations survive termination?
+* Which law governs the agreement?
 
-1. Open this repo in GitHub Codespaces (or clone locally)
-2. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-3. Copy the env template and fill in real values:
-   ```
-   cp .env.example .env
-   ```
-   - `LLM_API_KEY` — free key from [console.groq.com](https://console.groq.com)
-   - `QDRANT_URL` / `QDRANT_API_KEY` — free cluster from [cloud.qdrant.io](https://cloud.qdrant.io)
-4. Run the API:
-   ```
-   uvicorn api.main:app --reload
-   ```
-5. In a second terminal, run the UI:
-   ```
-   streamlit run ui/app.py
-   ```
-6. Confirm it's alive:
-   ```
-   curl localhost:8000/health
-   ```
+---
 
-## Architecture
+## Risk Scanner
 
-_(ASCII diagram of the agent graph added once it's built)_
+Automatically identifies:
 
-## Running tests
+* Liability risks
+* Indemnity risks
+* Termination risks
+* Confidentiality risks
 
-```
-pytest tests/
+Provides:
+
+* Severity
+* Issue
+* Recommendation
+
+---
+
+## Key Data Extract
+
+Extracts important information such as:
+
+* Agreement number
+* Service provider
+* Client
+* Governing law
+* Payment terms
+* Notice period
+* Termination fee
+* Uptime SLA
+
+---
+
+# Architecture
+
+```text
+Streamlit UI
+     ↓
+FastAPI
+     ↓
+LangGraph Agent
+     ↓
+Tools
+     ↓
+Retriever
+     ↓
+Reranker
+     ↓
+Qdrant Vector Store
+     ↓
+Embeddings
 ```
 
-## Known limitations
+---
 
-_(documented honestly as each tool is built — see decisions.md)_
+# Tech Stack
+
+* Python 3.12
+* FastAPI
+* Streamlit
+* LangGraph
+* LiteLLM
+* Qdrant
+* Sentence Transformers
+* Cross Encoder
+* PyMuPDF
+* Pytesseract OCR
+* pdf2image
+* HuggingFace
+
+---
+
+# Project Structure
+
+```text
+ClauseGuard
+
+agent/
+api/
+config/
+data/
+llm/
+models/
+prompts/
+rag/
+tests/
+ui/
+
+README.md
+requirements.txt
+Dockerfile
+```
+
+---
+
+# Installation
+
+Create virtual environment:
+
+```bash
+python -m venv .venv312
+```
+
+Activate:
+
+Windows
+
+```bash
+.venv312\Scripts\activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+# Environment Variables
+
+Create a `.env` file:
+
+```env
+GROK_API_KEY=your_key
+
+QDRANT_URL=your_url
+QDRANT_API_KEY=your_key
+
+QDRANT_COLLECTION=contracts
+```
+
+---
+
+# Running FastAPI
+
+Terminal 1:
+
+```bash
+uvicorn api.main:app --reload
+```
+
+API:
+
+```text
+http://127.0.0.1:8000
+```
+
+Health endpoint:
+
+```text
+http://127.0.0.1:8000/health
+```
+
+---
+
+# Running Streamlit
+
+Terminal 2:
+
+```bash
+streamlit run ui/app.py
+```
+
+UI:
+
+```text
+http://localhost:8501
+```
+
+---
+
+# Core Capabilities
+
+## Ask Anything
+
+Uses:
+
+* Semantic Retrieval
+* Cross Encoder Reranking
+* LLM-based Answer Generation
+
+---
+
+## Risk Analysis
+
+Identifies:
+
+* HIGH risks
+* MEDIUM risks
+* LOW risks
+
+and provides recommendations.
+
+---
+
+## Metadata Extraction
+
+Extracts structured contract information in JSON format.
+
+---
+
+# OCR Support
+
+If a PDF contains no text layer:
+
+* PyMuPDF extraction is attempted first.
+* OCR fallback using Tesseract and pdf2image is used automatically.
+
+---
+
+# Future Improvements
+
+* Chat history
+* Report generation
+* Deployment
+* Authentication
+* Multi-document support
+* Batch processing
+
+---
+
+# Example Questions
+
+* Can either party terminate for convenience?
+* What obligations survive termination?
+* What is the limitation of liability?
+* Which law governs the agreement?
+* What are the payment terms?
+
+---
+
+# License
+
+MIT License

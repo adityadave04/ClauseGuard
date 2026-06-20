@@ -1,3 +1,4 @@
+import json
 import requests
 import streamlit as st
 
@@ -45,13 +46,13 @@ if "risks" not in st.session_state:
     st.session_state.risks = None
 
 if "metadata" not in st.session_state:
-    st.session_state.metadata = None    
+    st.session_state.metadata = None
 
-# ----------------------------------------
+# --------------------------------------------------
 
 # ASK ANYTHING
 
-# ----------------------------------------
+# --------------------------------------------------
 
 if mode == "Ask Anything":
     query = st.text_input(
@@ -85,13 +86,19 @@ if mode == "Ask Anything":
             with st.spinner(
                 "Searching contract..."
             ):
-                response = requests.post(
-                    "http://127.0.0.1:8000/ask",
-                    params={
-                        "query": query
-                    }
-                )
-                st.session_state.answer = response.json()
+                try:
+                    response = requests.post(
+                        "http://127.0.0.1:8000/ask",
+                        params={
+                            "query": query
+                        }
+                    )
+                    response.raise_for_status()
+                    st.session_state.answer = response.json()
+                except Exception as e:
+                    st.error(
+                        f"Error: {e}"
+                    )
 
     if st.session_state.answer:
         result = st.session_state.answer
@@ -100,6 +107,12 @@ if mode == "Ask Anything":
         st.markdown(
             result["response"]["answer"]
         )
+        st.download_button(
+            "⬇ Download Answer",
+            data=result["response"]["answer"],
+            file_name="answer.txt",
+            use_container_width=True
+        )
         st.divider()
         st.subheader("Sources")
         for source in result["response"]["sources"]:
@@ -107,14 +120,16 @@ if mode == "Ask Anything":
                 f"- **Section {source['section_number']}** — {source['section_title']}"
             )
 
-# ----------------------------------------
+# --------------------------------------------------
 
 # RISK SCAN
 
-# ----------------------------------------
+# --------------------------------------------------
 
 elif mode == "Risk Scan":
-    st.subheader("⚠️ Contract Risk Analysis")
+    st.subheader(
+        "⚠️ Contract Risk Analysis"
+    )
 
     col1, col2 = st.columns(2)
 
@@ -138,10 +153,18 @@ elif mode == "Risk Scan":
         with st.spinner(
             "Scanning contract..."
         ):
-            response = requests.get(
-                "http://127.0.0.1:8000/risk"
-            )
-            st.session_state.risks = response.json()["risks"]
+            try:
+                response = requests.get(
+                    "http://127.0.0.1:8000/risk"
+                )
+                response.raise_for_status()
+                st.session_state.risks = (
+                    response.json()["risks"]
+                )
+            except Exception as e:
+                st.error(
+                    f"Error: {e}"
+                )
 
     if st.session_state.risks:
         st.divider()
@@ -172,34 +195,95 @@ elif mode == "Risk Scan":
                 risk["recommendation"]
             )
             st.divider()
+        st.download_button(
+            "⬇ Download Risk Report",
+            data=json.dumps(
+                st.session_state.risks,
+                indent=2
+            ),
+            file_name="risk_report.json",
+            mime="application/json",
+            use_container_width=True
+        )
+
+# --------------------------------------------------
+
+# KEY DATA EXTRACT
+
+# --------------------------------------------------
 
 elif mode == "Key Data Extract":
-
-    st.subheader("📄 Key Contract Data")
+    st.subheader(
+        "📄 Key Contract Data"
+    )
 
     if st.button(
         "Extract Metadata",
         use_container_width=True
     ):
-
         with st.spinner(
             "Extracting metadata..."
         ):
-
-            response = requests.get(
-                "http://127.0.0.1:8000/extract"
-            )
-
-            st.session_state.metadata = (
-                response.json()["metadata"]
-            )
+            try:
+                response = requests.get(
+                    "http://127.0.0.1:8000/extract"
+                )
+                response.raise_for_status()
+                st.session_state.metadata = (
+                    response.json()["metadata"]
+                )
+            except Exception as e:
+                st.error(
+                    f"Error: {e}"
+                )
 
     if st.session_state.metadata:
-
+        metadata = st.session_state.metadata
         st.divider()
-
-        st.subheader("Extracted Metadata")
-
-        st.json(
-            st.session_state.metadata
+        st.subheader(
+            "Extracted Metadata"
+        )
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric(
+                "Payment Terms (Days)",
+                metadata["payment_terms_days"]
+            )
+            st.metric(
+                "Notice Period (Days)",
+                metadata["notice_period_days"]
+            )
+        with col2:
+            st.metric(
+                "Termination Fee %",
+                metadata["termination_fee_percent"]
+            )
+            st.metric(
+                "Uptime SLA %",
+                metadata["uptime_sla_percent"]
+            )
+        st.write(
+            "Agreement Number"
+        )
+        st.code(
+            metadata["agreement_number"]
+        )
+        st.success(
+            metadata["service_provider"]
+        )
+        st.info(
+            metadata["client"]
+        )
+        st.write(
+            metadata["governing_law"]
+        )
+        st.download_button(
+            "⬇ Download Metadata",
+            data=json.dumps(
+                metadata,
+                indent=2
+            ),
+            file_name="metadata.json",
+            mime="application/json",
+            use_container_width=True
         )
