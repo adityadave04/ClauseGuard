@@ -1,6 +1,15 @@
 import json
 import requests
 import streamlit as st
+import sys
+import os
+
+# Add project root to Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from rag.chunker import ContractChunker
+from rag.embeddings import EmbeddingModel
+from rag.vector_store import VectorStore
 
 st.set_page_config(
 page_title="ClauseGuard",
@@ -54,17 +63,48 @@ if "metadata" not in st.session_state:
 
 # --------------------------------------------------
 
+@st.cache_resource
+def get_embedding_model():
+    return EmbeddingModel()
+
+@st.cache_resource
+def get_vector_store():
+    return VectorStore()
+
 st.subheader("📤 Upload Contract")
 
 uploaded_file = st.file_uploader(
     "Upload a contract",
     type=["pdf"]
 )
-
-if uploaded_file:
+if "contract_loaded" not in st.session_state:
+    st.session_state.contract_loaded = False
+if uploaded_file and not st.session_state.contract_loaded:
     with open("temp_contract.pdf", "wb") as f:
         f.write(uploaded_file.getbuffer())
     st.success("✅ Contract uploaded successfully!")
+    
+    with st.spinner("Processing contract..."):
+        try:
+            # Create chunks
+            chunker = ContractChunker("temp_contract.pdf")
+            chunks = chunker.create_chunks()
+            
+            # Generate embeddings
+            embedding_model = get_embedding_model()
+            vectors = embedding_model.embed_batch(
+                [chunk.text for chunk in chunks]
+            )
+            
+            # Upsert to Qdrant
+            vector_store = get_vector_store()
+            vector_store.create_collection()
+            vector_store.upsert_chunks(chunks, vectors)
+            
+            st.success(f"✅ Contract indexed! Created {len(chunks)} chunks.")
+            st.session_state.contract_loaded = True
+        except Exception as e:
+            st.error(f"❌ Error processing contract: {e}")
 
 # --------------------------------------------------
 
@@ -73,8 +113,11 @@ if uploaded_file:
 # --------------------------------------------------
 
 if mode == "Ask Anything":
+    st.subheader("❓ Ask a Question")
+    
     query = st.text_input(
-        "Ask a question about the contract"
+        "Ask a question about the contract",
+        placeholder="e.g., What are the payment terms?"
     )
 
     col1, col2 = st.columns(2)
@@ -82,13 +125,15 @@ if mode == "Ask Anything":
     with col1:
         ask_clicked = st.button(
             "Ask",
-            use_container_width=True
+            use_container_width=True,
+            key="ask_button"
         )
 
     with col2:
         clear_clicked = st.button(
-            "Clear",
-            use_container_width=True
+            "Clear History",
+            use_container_width=True,
+            key="clear_button"
         )
 
     if clear_clicked:
@@ -121,7 +166,7 @@ if mode == "Ask Anything":
     if st.session_state.answer:
         result = st.session_state.answer
         st.divider()
-        st.subheader("Answer")
+        st.subheader("✅ Answer")
         st.markdown(
             result["response"]["answer"]
         )
@@ -129,10 +174,11 @@ if mode == "Ask Anything":
             "⬇ Download Answer",
             data=result["response"]["answer"],
             file_name="answer.txt",
-            use_container_width=True
+            use_container_width=True,
+            key="download_answer"
         )
         st.divider()
-        st.subheader("Sources")
+        st.subheader("📌 Sources")
         for source in result["response"]["sources"]:
             st.markdown(
                 f"- **Section {source['section_number']}** — {source['section_title']}"
