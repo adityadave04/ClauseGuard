@@ -11,7 +11,7 @@ import logging
 
 from fastapi import FastAPI
 
-from config import settings
+from config.settings import settings
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("clauseguard")
