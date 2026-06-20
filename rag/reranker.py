@@ -1,12 +1,43 @@
-"""
-Cross-encoder reranking step — satisfies the "at least one reranking step
-after initial retrieval" requirement.
+from sentence_transformers import CrossEncoder
 
-TODO (RAG retrieval + reranking commit):
-- Load CrossEncoder(settings.reranker_model_name) once, module-level
-- rerank(question: str, candidates: list[Chunk]) -> list[Chunk]:
-    score every (question, chunk.text) pair, sort descending, return the
-    top settings.rerank_top_n chunks
-- This runs locally in-process, same as the embedding model — no extra
-  hosted service needed
-"""
+
+class Reranker:
+
+    _model = None
+
+    def __init__(self):
+
+        if Reranker._model is None:
+            Reranker._model = CrossEncoder(
+                "cross-encoder/ms-marco-MiniLM-L-6-v2"
+            )
+
+        self.model = Reranker._model
+
+    def rerank(
+        self,
+        query: str,
+        chunks: list[dict],
+        top_k: int = 4
+    ):
+
+        pairs = [
+            (query, chunk["text"])
+            for chunk in chunks
+        ]
+
+        scores = self.model.predict(pairs)
+
+        ranked = sorted(
+            zip(chunks, scores),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        return [
+            {
+                **chunk,
+                "rerank_score": float(score)
+            }
+            for chunk, score in ranked[:top_k]
+        ]

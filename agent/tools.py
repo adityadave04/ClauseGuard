@@ -1,16 +1,64 @@
-"""
-Tool implementations invoked by the LangGraph agent (agent/graph.py).
+from rag.retriever import Retriever
+from rag.reranker import Reranker
+from llm.grok_client import GrokClient
 
-Each tool here should be a plain Python function with a clear typed
-signature, decorated/wrapped for LangGraph tool-calling. Keeping the tool
-bodies here (rather than inline in graph.py) keeps the graph definition
-readable as just routing logic.
 
-TODO:
-- risk_scan(contract_chunks) -> structured JSON risk report with clause
-  references and risk reasons, checked against every category in the
-  Section 7 keyword taxonomy from the assignment brief (Liability,
-  Termination, Financial Risk, Legal/Dispute, Obligations, Data & IP)
-- extract_data(contract_chunks) -> JSON matching the required schema
-  (Section 8 of the brief), validated against real contract values
+class AskTool:
+
+    def __init__(self):
+
+        self.retriever = Retriever()
+        self.reranker = Reranker()
+        self.llm = GrokClient()
+
+    def ask(
+            self,
+            question: str
+    ):
+
+        chunks = self.retriever.retrieve(
+            question,
+            top_k=10
+        )
+
+        ranked_chunks = self.reranker.rerank(
+            question,
+            chunks,
+            top_k=4
+        )
+
+        context = "\n\n".join(
+            [
+                f"Section {chunk['section_number']} - "
+                f"{chunk['section_title']}\n"
+                f"{chunk['text']}"
+                for chunk in ranked_chunks
+            ]
+        )
+
+        prompt = f"""
+Answer the question using only the provided contract context.
+
+Context:
+
+{context}
+
+Question:
+{question}
+
+Provide citations like:
+(Section 8.4)
 """
+
+        answer = self.llm.invoke(prompt)
+
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "section_number": chunk["section_number"],
+                    "section_title": chunk["section_title"]
+                }
+                for chunk in ranked_chunks
+            ]
+        }
