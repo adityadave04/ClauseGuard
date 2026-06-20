@@ -24,7 +24,7 @@ class AskTool:
         ranked_chunks = self.reranker.rerank(
             question,
             chunks,
-            top_k=4
+            top_k=3
         )
 
         context = "\n\n".join(
