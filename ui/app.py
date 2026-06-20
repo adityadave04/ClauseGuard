@@ -50,6 +50,24 @@ if "metadata" not in st.session_state:
 
 # --------------------------------------------------
 
+# FILE UPLOAD
+
+# --------------------------------------------------
+
+st.subheader("📤 Upload Contract")
+
+uploaded_file = st.file_uploader(
+    "Upload a contract",
+    type=["pdf"]
+)
+
+if uploaded_file:
+    with open("temp_contract.pdf", "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    st.success("✅ Contract uploaded successfully!")
+
+# --------------------------------------------------
+
 # ASK ANYTHING
 
 # --------------------------------------------------

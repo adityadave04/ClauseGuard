@@ -1,20 +1,30 @@
 # ClauseGuard
 
-ClauseGuard is an AI-powered Contract Intelligence Assistant built using FastAPI, Streamlit, LangGraph, Qdrant, and LLMs.
+ClauseGuard is a contract intelligence assistant built to explore how RAG pipelines and agent frameworks can be used for practical legal-document analysis.
 
-It provides three core capabilities:
+It provides three capabilities:
 
-* Ask Anything about a contract
-* Risk Analysis
-* Key Data Extraction
+* Ask questions about a contract
+* Perform a risk scan
+* Extract important contract metadata
 
 ---
 
 # Features
 
+## Uploading Contracts
+
+Contracts are uploaded through the Streamlit interface.
+
+The uploaded PDF is processed and indexed automatically. No source-code changes or configuration updates are required to analyze a different agreement.
+
+For scanned documents, OCR support is available through Tesseract and Poppler.
+
+---
+
 ## Ask Anything
 
-Query contracts in natural language.
+Query the contract in natural language.
 
 Examples:
 
@@ -23,28 +33,26 @@ Examples:
 * What obligations survive termination?
 * Which law governs the agreement?
 
+Responses include section references from the contract.
+
 ---
 
-## Risk Scanner
+## Risk Scan
 
-Automatically identifies:
+Identifies potentially important clauses and highlights risks.
 
-* Liability risks
-* Indemnity risks
-* Termination risks
-* Confidentiality risks
-
-Provides:
+The output contains:
 
 * Severity
+* Section number
 * Issue
 * Recommendation
 
 ---
 
-## Key Data Extract
+## Metadata Extraction
 
-Extracts important information such as:
+Extracts structured information such as:
 
 * Agreement number
 * Service provider
@@ -53,29 +61,7 @@ Extracts important information such as:
 * Payment terms
 * Notice period
 * Termination fee
-* Uptime SLA
-
----
-
-# Architecture
-
-```text
-Streamlit UI
-     ↓
-FastAPI
-     ↓
-LangGraph Agent
-     ↓
-Tools
-     ↓
-Retriever
-     ↓
-Reranker
-     ↓
-Qdrant Vector Store
-     ↓
-Embeddings
-```
+* SLA percentage
 
 ---
 
@@ -90,16 +76,14 @@ Embeddings
 * Sentence Transformers
 * Cross Encoder
 * PyMuPDF
-* Pytesseract OCR
+* Tesseract OCR
 * pdf2image
-* HuggingFace
 
 ---
 
 # Project Structure
 
-```text
-ClauseGuard
+ClauseGuard/
 
 agent/
 api/
@@ -113,15 +97,15 @@ tests/
 ui/
 
 README.md
+decisions.md
 requirements.txt
 Dockerfile
-```
 
 ---
 
-# Installation
+# Setup
 
-Create virtual environment:
+Create a virtual environment:
 
 ```bash
 python -m venv .venv312
@@ -145,31 +129,48 @@ pip install -r requirements.txt
 
 # Environment Variables
 
-Create a `.env` file:
+Create a `.env` file based on `.env.example`.
+
+## LLM
 
 ```env
-GROK_API_KEY=your_key
+GROK_API_KEY=your_grok_api_key
+LLM_MODEL=xai/grok-3-mini
+```
 
-QDRANT_URL=your_url
-QDRANT_API_KEY=your_key
+Keeping the model name configurable makes it easy to switch providers without changing code.
 
+---
+
+## Vector Database
+
+```env
+QDRANT_URL=your_qdrant_url
+QDRANT_API_KEY=your_qdrant_api_key
 QDRANT_COLLECTION=contracts
 ```
 
 ---
 
+## OCR
+
+```env
+TESSERACT_PATH=C:\Program Files\Tesseract-OCR\tesseract.exe
+POPPLER_PATH=C:\path\to\poppler\Library\bin
+```
+
+These are required only for scanned PDFs.
+
+PyMuPDF is used first. OCR is used only if no text layer is found.
+
+---
+
 # Running FastAPI
 
-Terminal 1:
+Start the API:
 
 ```bash
 uvicorn api.main:app --reload
-```
-
-API:
-
-```text
-http://127.0.0.1:8000
 ```
 
 Health endpoint:
@@ -182,7 +183,7 @@ http://127.0.0.1:8000/health
 
 # Running Streamlit
 
-Terminal 2:
+Start the UI:
 
 ```bash
 streamlit run ui/app.py
@@ -196,63 +197,63 @@ http://localhost:8501
 
 ---
 
-# Core Capabilities
+# Tests
 
-## Ask Anything
+Run all tests:
 
-Uses:
+```bash
+pytest -s
+```
 
-* Semantic Retrieval
-* Cross Encoder Reranking
-* LLM-based Answer Generation
+Current status:
 
----
-
-## Risk Analysis
-
-Identifies:
-
-* HIGH risks
-* MEDIUM risks
-* LOW risks
-
-and provides recommendations.
+9 tests passing.
 
 ---
 
-## Metadata Extraction
+# Architecture
 
-Extracts structured contract information in JSON format.
+Streamlit UI
 
----
+↓
 
-# OCR Support
+FastAPI
 
-If a PDF contains no text layer:
+↓
 
-* PyMuPDF extraction is attempted first.
-* OCR fallback using Tesseract and pdf2image is used automatically.
+LangGraph
+
+↓
+
+Tools
+
+↓
+
+Retriever
+
+↓
+
+Cross Encoder Reranker
+
+↓
+
+Qdrant
+
+↓
+
+Embeddings
 
 ---
 
 # Future Improvements
 
+* PDF upload support
 * Chat history
 * Report generation
-* Deployment
-* Authentication
 * Multi-document support
-* Batch processing
-
----
-
-# Example Questions
-
-* Can either party terminate for convenience?
-* What obligations survive termination?
-* What is the limitation of liability?
-* Which law governs the agreement?
-* What are the payment terms?
+* Authentication
+* Deployment
+* Evaluation framework
 
 ---
 

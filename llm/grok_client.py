@@ -18,7 +18,7 @@ class GrokClient:
     def invoke(self, prompt: str):
 
         response = self.client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model=os.getenv("GROK_MODEL"),
             messages=[
                 {
                     "role": "user",

@@ -64,9 +64,7 @@ Context:
         answer = answer.replace("```json", "")
         answer = answer.replace("```", "")
         answer = answer.strip()
-
-        print("\nRAW RESPONSE:\n")
-        print(answer)
+        print("Couldn't parse risk response")
 
         try:
             return json.loads(answer)
