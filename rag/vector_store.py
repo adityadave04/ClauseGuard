@@ -5,11 +5,7 @@ from qdrant_client.models import (
     PointStruct
 )
 
-from config.settings import (
-    QDRANT_URL,
-    QDRANT_API_KEY,
-    QDRANT_COLLECTION
-)
+from config.settings import settings
 
 from models.chunk import Chunk
 
@@ -19,8 +15,8 @@ class VectorStore:
     def __init__(self):
 
         self.client = QdrantClient(
-            url=QDRANT_URL,
-            api_key=QDRANT_API_KEY
+            url=settings.QDRANT_URL,
+            api_key=settings.QDRANT_API_KEY
         )
 
     def create_collection(self):
@@ -30,10 +26,10 @@ class VectorStore:
             for c in self.client.get_collections().collections
         ]
 
-        if QDRANT_COLLECTION not in collections:
+        if settings.QDRANT_COLLECTION not in collections:
 
             self.client.create_collection(
-                collection_name=QDRANT_COLLECTION,
+                collection_name=settings.QDRANT_COLLECTION,
                 vectors_config=VectorParams(
                     size=384,
                     distance=Distance.COSINE
@@ -64,7 +60,7 @@ class VectorStore:
             )
 
         self.client.upsert(
-            collection_name=QDRANT_COLLECTION,
+            collection_name=settings.QDRANT_COLLECTION,
             points=points
         )
 
@@ -75,7 +71,7 @@ class VectorStore:
     ):
 
         results = self.client.query_points(
-            collection_name=QDRANT_COLLECTION,
+            collection_name=settings.QDRANT_COLLECTION,
             query=query_vector,
             limit=top_k
         )

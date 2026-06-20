@@ -1,60 +1,57 @@
-"""
-FastAPI application entrypoint.
-"""
-
 import logging
 
 from fastapi import FastAPI
+
 from agent.risk_scanner import RiskScanner
-
 from agent.extractor import MetadataExtractor
+from agent.graph import contract_agent
 
-extractor = MetadataExtractor()
-scanner = RiskScanner()
+from config.settings import settings
 
-logging.basicConfig(level="INFO")
-logger = logging.getLogger("clauseguard")
+logging.basicConfig(
+level=settings.LOG_LEVEL
+)
+
+logger = logging.getLogger(
+"clauseguard"
+)
 
 app = FastAPI(
 title="ClauseGuard",
-description="Contract Intelligence Agent — Ask Anything, Risk Scan, Key Data Extract",
-version="0.1.0",
+version="0.1.0"
 )
+
+risk_scanner = RiskScanner()
+extractor = MetadataExtractor()
 
 @app.get("/health")
 def health_check():
-    logger.info("Health check called")
-    return {"status": "ok"}
 
-from agent.graph import contract_agent
+    return {
+        "status": "ok"
+    }
 
 @app.post("/ask")
-def ask(query: str):
-
-    response = contract_agent.invoke(
+def ask(
+    query: str
+):
+    result = contract_agent.invoke(
         {
             "query": query
         }
     )
-
-    return response
-
-
+    return result
 
 @app.get("/risk")
-def risk_scan():
-
-    risks = scanner.scan()
-
+def risk():
+    risks = risk_scanner.scan()
     return {
         "risks": risks
     }
 
 @app.get("/extract")
 def extract():
-
     metadata = extractor.extract()
-
     return {
         "metadata": metadata
     }
