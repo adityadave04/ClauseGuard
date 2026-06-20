@@ -1,9 +1,38 @@
-"""
-Query-time retrieval from Qdrant.
+from rag.embeddings import EmbeddingModel
+from rag.vector_store import VectorStore
 
-TODO (RAG retrieval + reranking commit):
-- embed the incoming question via rag/embeddings.py
-- query Qdrant for top settings.retrieval_top_k candidate chunks
-- return chunks with their text, metadata (section/page), and similarity
-  score, ready to be passed into rag/reranker.py
-"""
+
+class Retriever:
+
+    def __init__(self):
+        self.embedder = EmbeddingModel()
+        self.store = VectorStore()
+
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 10
+    ):
+
+        query_vector = self.embedder.embed_text(query)
+
+        results = self.store.search(
+            query_vector=query_vector,
+            top_k=top_k
+        )
+
+        chunks = []
+
+        for result in results:
+
+            chunks.append(
+                {
+                    "text": result.payload["text"],
+                    "section_number": result.payload["section_number"],
+                    "section_title": result.payload["section_title"],
+                    "page_number": result.payload["page_number"],
+                    "score": result.score
+                }
+            )
+
+        return chunks
