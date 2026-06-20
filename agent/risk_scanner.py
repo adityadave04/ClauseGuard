@@ -2,7 +2,7 @@ import json
 
 from rag.retriever import Retriever
 from rag.reranker import Reranker
-from llm.client import LLMClient
+from llm.grok_client import GrokClient
 
 
 class RiskScanner:
@@ -10,7 +10,7 @@ class RiskScanner:
     def __init__(self):
         self.retriever = Retriever()
         self.reranker = Reranker()
-        self.llm = LLMClient()
+        self.llm = GrokClient()
 
     def scan(self):
 

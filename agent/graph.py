@@ -1,26 +1,85 @@
-"""
-LangGraph agent graph definition — the core of ClauseGuard.
+from typing import TypedDict
 
-This module owns the single agent instance that all three tools (Ask
-Anything, Risk Scan, Key Data Extract) run through, per the assignment's
-"one unified AI agent... not three separate scripts" requirement.
+from langgraph.graph import StateGraph, END
 
-TODO (agent graph commit):
-- Define a StateGraph with a router node that decides which tool(s) to call
-  based on the incoming request (free-text question vs. button-triggered
-  Risk Scan / Extract)
-- Wire in the three tool nodes:
-    - ask_anything   -> calls into rag/retriever.py + rag/reranker.py
-    - risk_scan      -> scans contract chunks against the keyword taxonomy
-    - extract_data   -> pulls the fixed JSON schema from the contract
-- Add a multi-tool chaining edge: e.g. a free-text question like "what's
-  our termination exposure" should route through BOTH risk_scan and
-  ask_anything, then synthesize — this is what the rubric calls
-  "multi-tool flows" (extract data then cross-check against a risk flag)
-- Compile the graph and export `agent_graph` for api/routes.py to invoke
-- Add structured logging at every tool-call boundary (tool name, input,
-  output) per the "basic logging for agent tool calls" requirement
+from agent.tools import AskTool
+from agent.risk_scanner import RiskScanner
+from agent.extractor import ContractExtractor
 
-Tool 1 (Ask Anything) is built first, as a standalone node function, before
-the full router/conditional-edge logic is added — see rag/ for that work.
-"""
+
+
+class AgentState(TypedDict):
+
+    query: str
+    response: dict | str
+
+
+ask_tool = AskTool()
+risk_tool = RiskScanner()
+extract_tool = ContractExtractor()
+
+ask_tool = AskTool()
+risk_tool = RiskScanner()
+extract_tool = ContractExtractor()
+
+def ask_node(state):
+
+    result = ask_tool.ask(
+        state["query"]
+    )
+
+    return {
+        "response": result
+    }
+
+
+def risk_node(state):
+
+    result = risk_tool.scan()
+
+    return {
+        "response": result
+    }
+
+
+def extract_node(state):
+
+    result = extract_tool.extract()
+
+    return {
+        "response": result
+    }
+
+
+def router(state):
+
+    query = state["query"].lower()
+
+    if "risk" in query:
+        return "risk"
+
+    if "extract" in query:
+        return "extract"
+
+    return "ask"
+
+graph = StateGraph(AgentState)
+
+graph.add_node("ask", ask_node)
+graph.add_node("risk", risk_node)
+graph.add_node("extract", extract_node)
+
+graph.set_conditional_entry_point(
+    router,
+    {
+        "ask": "ask",
+        "risk": "risk",
+        "extract": "extract"
+    }
+)
+
+graph.add_edge("ask", END)
+graph.add_edge("risk", END)
+graph.add_edge("extract", END)
+
+contract_agent = graph.compile()
