@@ -1,6 +1,6 @@
 # Environment
 .env
-venv/
+.venv312/
 .venv/
 __pycache__/
 *.pyc
