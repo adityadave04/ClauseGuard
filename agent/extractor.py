@@ -5,7 +5,7 @@ from rag.reranker import Reranker
 from llm.grok_client import GrokClient
 
 
-class ContractExtractor:
+class MetadataExtractor:
 
     def __init__(self):
 

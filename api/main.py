@@ -5,6 +5,12 @@ FastAPI application entrypoint.
 import logging
 
 from fastapi import FastAPI
+from agent.risk_scanner import RiskScanner
+
+from agent.extractor import MetadataExtractor
+
+extractor = MetadataExtractor()
+scanner = RiskScanner()
 
 logging.basicConfig(level="INFO")
 logger = logging.getLogger("clauseguard")
@@ -32,3 +38,23 @@ def ask(query: str):
     )
 
     return response
+
+
+
+@app.get("/risk")
+def risk_scan():
+
+    risks = scanner.scan()
+
+    return {
+        "risks": risks
+    }
+
+@app.get("/extract")
+def extract():
+
+    metadata = extractor.extract()
+
+    return {
+        "metadata": metadata
+    }

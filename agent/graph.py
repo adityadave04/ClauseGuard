@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, END
 
 from agent.tools import AskTool
 from agent.risk_scanner import RiskScanner
-from agent.extractor import ContractExtractor
+from agent.extractor import MetadataExtractor
 
 
 
@@ -16,11 +16,11 @@ class AgentState(TypedDict):
 
 ask_tool = AskTool()
 risk_tool = RiskScanner()
-extract_tool = ContractExtractor()
+extract_tool = MetadataExtractor()
 
 ask_tool = AskTool()
 risk_tool = RiskScanner()
-extract_tool = ContractExtractor()
+extract_tool = MetadataExtractor()
 
 def ask_node(state):
 
