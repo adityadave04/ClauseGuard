@@ -24,7 +24,8 @@ class GrokClient:
                     "content": prompt
                 }
             ],
-            temperature=0
+            temperature=0,
+            max_tokens=1500
         )
 
         return response.choices[0].message.content
