@@ -2,7 +2,7 @@ import json
 
 from rag.retriever import Retriever
 from rag.reranker import Reranker
-from llm.grok_client import GrokClient
+from llm.client import LLMClient
 
 
 class ContractExtractor:
@@ -11,7 +11,7 @@ class ContractExtractor:
 
         self.retriever = Retriever()
         self.reranker = Reranker()
-        self.llm = GrokClient()
+        self.llm = LLMClient()
 
     def extract(self):
 

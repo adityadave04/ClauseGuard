@@ -1,6 +1,6 @@
 from rag.retriever import Retriever
 from rag.reranker import Reranker
-from llm.grok_client import GrokClient
+from llm.client import LLMClient
 
 
 class AskTool:
@@ -9,7 +9,7 @@ class AskTool:
 
         self.retriever = Retriever()
         self.reranker = Reranker()
-        self.llm = GrokClient()
+        self.llm = LLMClient()
 
     def ask(
             self,
