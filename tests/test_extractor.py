@@ -1,9 +1,9 @@
-from agent.extractor import ContractExtractor
+from agent.extractor import MetadataExtractor
 
 
 def test_extractor():
 
-    extractor = ContractExtractor()
+    extractor = MetadataExtractor()
 
     result = extractor.extract()
 
