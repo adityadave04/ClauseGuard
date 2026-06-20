@@ -1,6 +1,6 @@
 # Architectural Decisions
 
-This document records key design decisions made during the development of ClauseGuard.
+This document captures some of the design decisions made while building ClauseGuard.
 
 ---
 
@@ -8,14 +8,17 @@ This document records key design decisions made during the development of Clause
 
 ## Decision
 
-Use a RAG architecture instead of passing the entire contract directly to the LLM.
+Use a RAG pipeline instead of passing the entire contract directly to the LLM.
 
 ## Reason
 
-* Reduces context size.
-* Improves response quality.
-* Enables citation of relevant sections.
-* Scales to larger contracts.
+Contracts can be long and exceed the effective context window of smaller models.
+
+Retrieving only the relevant sections:
+
+* reduces token usage,
+* improves answer quality,
+* and makes section citations possible.
 
 ---
 
@@ -23,14 +26,16 @@ Use a RAG architecture instead of passing the entire contract directly to the LL
 
 ## Decision
 
-Use Qdrant.
+Use Qdrant as the vector store.
 
 ## Reason
 
-* Simple API.
-* Managed cloud offering available.
-* Efficient similarity search.
-* Good Python support.
+Qdrant provides:
+
+* efficient semantic search,
+* good Python support,
+* cloud-hosted deployments,
+* and simple APIs.
 
 ---
 
@@ -38,22 +43,17 @@ Use Qdrant.
 
 ## Decision
 
-Use sentence-transformers.
+Use:
 
-Model:
-
-all-MiniLM-L6-v2
+BAAI/bge-small-en-v1.5
 
 ## Reason
 
-* Lightweight.
-* Fast inference.
-* Good semantic search quality.
-* Suitable for local execution.
+The model is lightweight and provides good semantic retrieval performance while still being practical for local development.
 
 ---
 
-# 4. Cross Encoder Reranker
+# 4. Cross Encoder Reranking
 
 ## Decision
 
@@ -63,9 +63,9 @@ cross-encoder/ms-marco-MiniLM-L-6-v2
 
 ## Reason
 
-* Improves retrieval accuracy.
-* Better relevance ranking.
-* Reduces hallucinations.
+Initial vector retrieval may return loosely related chunks.
+
+Reranking improves relevance and reduces hallucinations by selecting the most useful sections before sending context to the LLM.
 
 ---
 
@@ -73,17 +73,19 @@ cross-encoder/ms-marco-MiniLM-L-6-v2
 
 ## Decision
 
-Use PyMuPDF first and OCR only when necessary.
+Attempt text extraction with PyMuPDF first and use OCR only when required.
 
 OCR stack:
 
+* Tesseract
 * pdf2image
-* pytesseract
+* Poppler
 
 ## Reason
 
-* Faster when PDFs already contain text.
-* OCR fallback supports scanned documents.
+Most PDFs already contain a text layer.
+
+Using OCR only as a fallback keeps processing faster while still supporting scanned documents.
 
 ---
 
@@ -95,31 +97,17 @@ Use LangGraph.
 
 ## Reason
 
-* Clear graph-based workflow.
-* Easy routing between tools.
-* Supports future expansion.
+The graph-based approach makes it easy to route requests between different tools and leaves room for future expansion.
 
----
+Current tools:
 
-# 7. Tool-Based Architecture
-
-## Decision
-
-Create separate tools:
-
-* Ask Tool
+* Ask Anything
 * Risk Scanner
 * Metadata Extractor
 
-## Reason
-
-* Separation of concerns.
-* Easier testing.
-* Easier future extension.
-
 ---
 
-# 8. API Framework
+# 7. API Layer
 
 ## Decision
 
@@ -127,19 +115,15 @@ Use FastAPI.
 
 ## Reason
 
-* Fast development.
-* Automatic documentation.
-* Simple REST endpoints.
+FastAPI provides:
 
-Endpoints:
-
-* /ask
-* /risk
-* /extract
+* simple REST endpoints,
+* automatic validation,
+* and easy integration with Streamlit.
 
 ---
 
-# 9. UI Framework
+# 8. UI
 
 ## Decision
 
@@ -147,13 +131,13 @@ Use Streamlit.
 
 ## Reason
 
-* Rapid prototyping.
-* Minimal frontend code.
-* Easy integration with APIs.
+The focus of the project is on backend intelligence rather than frontend development.
+
+Streamlit allows rapid prototyping with minimal overhead.
 
 ---
 
-# 10. LLM Layer
+# 9. LLM Abstraction
 
 ## Decision
 
@@ -161,101 +145,101 @@ Use LiteLLM.
 
 ## Reason
 
-* Provider abstraction.
-* Easy model switching.
-* Supports multiple vendors.
+LiteLLM makes it easy to switch providers without changing application logic.
 
 Current model:
 
-grok-3-mini
+xai/grok-3-mini
 
-Future models:
+Possible alternatives:
 
 * GPT-4o
 * Claude
 * Gemini
 
----
-
-# 11. Session State
-
-## Decision
-
-Use Streamlit session state.
-
-## Reason
-
-* Preserve responses.
-* Support clear functionality.
-* Improve user experience.
+The model name itself is stored in configuration.
 
 ---
 
-# 12. Risk Analysis
+# 10. Configuration Management
 
 ## Decision
 
-Use LLM-generated structured JSON.
+Store external configuration in environment variables.
 
 ## Reason
 
-* Easy UI rendering.
-* Structured outputs.
-* Supports future reporting.
+Secrets and machine-specific values should not be hardcoded.
 
-Fields:
+Environment variables include:
 
-* severity
-* section_number
-* title
-* issue
-* recommendation
+* GROK_API_KEY
+* LLM_MODEL
+* QDRANT_URL
+* QDRANT_API_KEY
+* QDRANT_COLLECTION
+* TESSERACT_PATH
+* POPPLER_PATH
+* LOG_LEVEL
+
+This keeps code portable across environments.
 
 ---
 
-# 13. Metadata Extraction
+# 11. Contract Input
 
 ## Decision
 
-Extract key information into JSON.
+Accept contracts through the Streamlit UI instead of using a fixed file path.
 
 ## Reason
 
-Provides structured contract information:
+Contracts are runtime inputs, not configuration.
 
-* agreement_number
-* service_provider
-* client
-* governing_law
-* payment_terms_days
-* notice_period_days
-* termination_fee_percent
-* uptime_sla_percent
+Allowing file upload makes the application reusable without changing source code whenever a new agreement needs to be analyzed.
 
 ---
 
-# 14. Docker
+# 12. OCR Dependencies
 
 ## Decision
 
-Provide Docker support but defer container deployment.
+Keep Tesseract and Poppler paths outside the code.
 
 ## Reason
 
-* Current local environment sufficient.
-* Disk space limitations.
-* Docker can be added later without changing application logic.
+Installation paths vary across machines and operating systems.
+
+Tesseract performs OCR on scanned images, while Poppler converts PDF pages into images before OCR.
+
+Keeping these paths in environment variables avoids machine-specific hardcoding.
+
+---
+
+# 13. Structured Outputs
+
+## Decision
+
+Return JSON from the Risk Scanner and Metadata Extractor.
+
+## Reason
+
+Structured outputs are easier to:
+
+* display in the UI,
+* download,
+* and integrate with future reporting workflows.
 
 ---
 
 # Future Improvements
 
-* Multi-document support.
-* Authentication.
-* Report generation.
-* Chat history.
-* PDF export.
-* Deployment.
-* Batch processing.
-* Multi-agent workflows.
-* Evaluation framework.
+Potential improvements include:
+
+* chat history,
+* PDF report generation,
+* authentication,
+* multi-document support,
+* evaluation framework,
+* deployment,
+* and multi-agent workflows.

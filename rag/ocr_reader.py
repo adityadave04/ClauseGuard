@@ -2,19 +2,21 @@
 
 from pdf2image import convert_from_path
 import pytesseract
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-pytesseract.pytesseract.tesseract_cmd = (
-    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-)
+pytesseract.pytesseract.tesseract_cmd = os.getenv("TESSERACT_CMD")
+POPPLER_PATH = os.getenv("POPPLER_PATH")
 
 
 def extract_text_ocr(pdf_path):
 
     pages = convert_from_path(
-    pdf_path,
-    poppler_path=r"C:\Users\adity\Downloads\Release-26.02.0-0\poppler-26.02.0\Library\bin"
-)
+        pdf_path,
+        poppler_path=POPPLER_PATH
+    )
 
     result = []
 
